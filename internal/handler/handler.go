@@ -6,7 +6,7 @@ import (
 
 	"github.com/me/durable/internal/auth"
 	"github.com/me/durable/internal/cursor"
-	"github.com/me/durable/internal/storage"
+	"github.com/me/durable/storage"
 )
 
 // Handler handles all HTTP requests for the durable streams server.

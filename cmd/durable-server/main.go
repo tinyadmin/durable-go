@@ -12,37 +12,24 @@ import (
 	"time"
 
 	"github.com/me/durable/internal/handler"
-	"github.com/me/durable/internal/storage"
-	"github.com/me/durable/internal/storage/memory"
-	"github.com/me/durable/internal/storage/sqlite"
+	"github.com/me/durable/storage"
+	"github.com/me/durable/storage/memory"
 )
 
 func main() {
 	// Parse flags
 	port := flag.Int("port", 4437, "Port to listen on")
 	host := flag.String("host", "127.0.0.1", "Host to bind to")
-	storageType := flag.String("storage", "memory", "Storage backend (memory, sqlite, s3)")
-	dbPath := flag.String("db", "durable.db", "SQLite database path")
+	storageType := flag.String("storage", "memory", "Storage backend (memory)")
 	flag.Parse()
 
 	// Create storage backend
 	var store storage.Storage
-	var err error
 	switch *storageType {
 	case "memory":
 		store = memory.New()
-	case "sqlite":
-		opts := sqlite.DefaultOptions()
-		opts.Path = *dbPath
-		store, err = sqlite.New(opts)
-		if err != nil {
-			log.Fatalf("Failed to initialize SQLite storage: %v", err)
-		}
-		log.Printf("Using SQLite storage: %s", *dbPath)
-	case "s3":
-		log.Fatal("S3 storage not yet implemented")
 	default:
-		log.Fatalf("Unknown storage type: %s", *storageType)
+		log.Fatalf("Unknown storage type: %s (sqlite available as separate module)", *storageType)
 	}
 	defer store.Close()
 

@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/me/durable/internal/storage"
-	"github.com/me/durable/internal/stream"
+	"github.com/me/durable/storage"
+	"github.com/me/durable/stream"
 )
 
 // handleLongPoll handles GET requests with ?live=long-poll.

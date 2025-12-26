@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/me/durable/internal/auth"
-	"github.com/me/durable/internal/storage"
-	"github.com/me/durable/internal/stream"
+	"github.com/me/durable/storage"
+	"github.com/me/durable/stream"
 )
 
 // handleAppend handles POST requests to append data to a stream.

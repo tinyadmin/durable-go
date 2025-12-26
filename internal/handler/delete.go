@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/me/durable/internal/auth"
-	"github.com/me/durable/internal/storage"
+	"github.com/me/durable/storage"
 )
 
 // handleDelete handles DELETE requests to remove a stream.

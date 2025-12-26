@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/me/durable/internal/auth"
-	"github.com/me/durable/internal/storage"
-	"github.com/me/durable/internal/stream"
+	"github.com/me/durable/storage"
+	"github.com/me/durable/stream"
 )
 
 // handleRead handles GET requests to read from a stream.

@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/me/durable/internal/auth"
-	"github.com/me/durable/internal/storage"
+	"github.com/me/durable/storage"
 )
 
 // handleMetadata handles HEAD requests to get stream metadata.

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/me/durable/internal/handler"
-	"github.com/me/durable/internal/storage/memory"
+	"github.com/me/durable/storage/memory"
 )
 
 func TestStreamLifecycle(t *testing.T) {

@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/me/durable/internal/notify"
-	"github.com/me/durable/internal/storage"
-	"github.com/me/durable/internal/stream"
+	"github.com/me/durable/notify"
+	"github.com/me/durable/storage"
+	"github.com/me/durable/stream"
 	_ "modernc.org/sqlite"
 )
 

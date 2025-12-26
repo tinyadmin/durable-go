@@ -1,6 +1,6 @@
 package notify
 
-import "github.com/me/durable/internal/storage"
+import "github.com/me/durable/storage"
 
 // Notifier handles pub/sub for stream updates.
 type Notifier interface {

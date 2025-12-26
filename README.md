@@ -14,10 +14,12 @@ Go implementation of the [Durable Streams](https://github.com/durable-streams/du
 
 ## Storage Backends
 
-| Backend | Description |
-|---------|-------------|
-| `memory` | In-memory, no persistence (default) |
-| `sqlite` | SQLite with WAL mode, survives restarts |
+| Backend | Module | Description |
+|---------|--------|-------------|
+| `memory` | core | In-memory, no persistence (default) |
+| `sqlite` | `storage/sqlite` | SQLite with WAL mode (separate module) |
+
+The core module has **zero dependencies**. SQLite is a separate Go module to avoid pulling in modernc.org/sqlite unless needed.
 
 ## Usage
 
@@ -28,11 +30,25 @@ go build -o durable-server ./cmd/durable-server
 # Run with memory storage (default)
 ./durable-server
 
-# Run with SQLite
-./durable-server -storage sqlite -db /path/to/durable.db
-
 # Options
 ./durable-server -help
+```
+
+### Using SQLite
+
+SQLite is available as a separate module. Import it in your own binary:
+
+```go
+import (
+    "github.com/me/durable/internal/handler"
+    "github.com/me/durable/storage/sqlite"
+)
+
+func main() {
+    store, _ := sqlite.New(sqlite.DefaultOptions())
+    h := handler.New(store)
+    http.ListenAndServe(":4437", h)
+}
 ```
 
 ## API
