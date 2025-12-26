@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/me/durable/internal/auth"
-	"github.com/me/durable/storage"
+	"github.com/tinyadmin/durable-go/internal/auth"
+	"github.com/tinyadmin/durable-go/storage"
 )
 
 // handleMetadata handles HEAD requests to get stream metadata.

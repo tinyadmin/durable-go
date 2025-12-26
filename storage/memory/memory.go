@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/me/durable/notify"
-	"github.com/me/durable/storage"
-	"github.com/me/durable/stream"
+	"github.com/tinyadmin/durable-go/notify"
+	"github.com/tinyadmin/durable-go/storage"
+	"github.com/tinyadmin/durable-go/stream"
 )
 
 // message represents a single message in a stream.

@@ -1,9 +1,9 @@
-module github.com/me/durable/storage/sqlite
+module github.com/tinyadmin/durable-go/storage/sqlite
 
 go 1.25.5
 
 require (
-	github.com/me/durable v0.0.0
+	github.com/tinyadmin/durable-go v0.0.0
 	modernc.org/sqlite v1.41.0
 )
 
@@ -20,4 +20,4 @@ require (
 	modernc.org/memory v1.11.0 // indirect
 )
 
-replace github.com/me/durable => ../..
+replace github.com/tinyadmin/durable-go => ../..

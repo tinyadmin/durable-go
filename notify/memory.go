@@ -3,7 +3,7 @@ package notify
 import (
 	"sync"
 
-	"github.com/me/durable/storage"
+	"github.com/tinyadmin/durable-go/storage"
 )
 
 // MemoryNotifier is an in-memory implementation of Notifier.

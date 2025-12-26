@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/me/durable/storage"
-	"github.com/me/durable/stream"
+	"github.com/tinyadmin/durable-go/storage"
+	"github.com/tinyadmin/durable-go/stream"
 )
 
 // handleLongPoll handles GET requests with ?live=long-poll.

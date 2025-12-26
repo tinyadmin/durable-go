@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/me/durable/internal/auth"
-	"github.com/me/durable/internal/cursor"
-	"github.com/me/durable/storage"
+	"github.com/tinyadmin/durable-go/internal/auth"
+	"github.com/tinyadmin/durable-go/internal/cursor"
+	"github.com/tinyadmin/durable-go/storage"
 )
 
 // Handler handles all HTTP requests for the durable streams server.

@@ -40,8 +40,8 @@ SQLite is available as a separate module. Import it in your own binary:
 
 ```go
 import (
-    "github.com/me/durable/internal/handler"
-    "github.com/me/durable/storage/sqlite"
+    "github.com/tinyadmin/durable-go/internal/handler"
+    "github.com/tinyadmin/durable-go/storage/sqlite"
 )
 
 func main() {
@@ -97,8 +97,8 @@ type AuthContext struct {
 
 ```go
 import (
-    "github.com/me/durable/internal/auth"
-    "github.com/me/durable/internal/handler"
+    "github.com/tinyadmin/durable-go/internal/auth"
+    "github.com/tinyadmin/durable-go/internal/handler"
 )
 
 h := handler.New(store).WithAuth(&auth.APIKeyProvider{

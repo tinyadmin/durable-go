@@ -1,3 +1,3 @@
-module github.com/me/durable
+module github.com/tinyadmin/durable-go
 
 go 1.25.5

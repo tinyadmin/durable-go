@@ -5,9 +5,9 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/me/durable/internal/auth"
-	"github.com/me/durable/storage"
-	"github.com/me/durable/stream"
+	"github.com/tinyadmin/durable-go/internal/auth"
+	"github.com/tinyadmin/durable-go/storage"
+	"github.com/tinyadmin/durable-go/stream"
 )
 
 // handleRead handles GET requests to read from a stream.

@@ -11,9 +11,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/me/durable/internal/handler"
-	"github.com/me/durable/storage"
-	"github.com/me/durable/storage/memory"
+	"github.com/tinyadmin/durable-go/internal/handler"
+	"github.com/tinyadmin/durable-go/storage"
+	"github.com/tinyadmin/durable-go/storage/memory"
 )
 
 func main() {

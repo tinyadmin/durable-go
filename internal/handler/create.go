@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/me/durable/internal/auth"
-	"github.com/me/durable/storage"
-	"github.com/me/durable/stream"
+	"github.com/tinyadmin/durable-go/internal/auth"
+	"github.com/tinyadmin/durable-go/storage"
+	"github.com/tinyadmin/durable-go/stream"
 )
 
 // handleCreate handles PUT requests to create a stream.
