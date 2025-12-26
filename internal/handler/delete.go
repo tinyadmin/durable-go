@@ -4,13 +4,19 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/me/durable/internal/auth"
 	"github.com/me/durable/internal/storage"
 )
 
 // handleDelete handles DELETE requests to remove a stream.
 func (h *Handler) handleDelete(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	streamURL := r.URL.Path
+	streamURL := h.scopedStreamURL(r)
+
+	// Authorize
+	if !h.authorize(w, r, auth.OpDelete, streamURL) {
+		return
+	}
 
 	err := h.storage.DeleteStream(ctx, streamURL)
 	if err != nil {

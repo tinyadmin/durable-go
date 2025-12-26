@@ -4,13 +4,19 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/me/durable/internal/auth"
 	"github.com/me/durable/internal/storage"
 )
 
 // handleMetadata handles HEAD requests to get stream metadata.
 func (h *Handler) handleMetadata(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	streamURL := r.URL.Path
+	streamURL := h.scopedStreamURL(r)
+
+	// Authorize
+	if !h.authorize(w, r, auth.OpRead, streamURL) {
+		return
+	}
 
 	meta, err := h.storage.GetMetadata(ctx, streamURL)
 	if err != nil {

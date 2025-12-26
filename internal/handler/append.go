@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/me/durable/internal/auth"
 	"github.com/me/durable/internal/storage"
 	"github.com/me/durable/internal/stream"
 )
@@ -12,7 +13,12 @@ import (
 // handleAppend handles POST requests to append data to a stream.
 func (h *Handler) handleAppend(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	streamURL := r.URL.Path
+	streamURL := h.scopedStreamURL(r)
+
+	// Authorize
+	if !h.authorize(w, r, auth.OpAppend, streamURL) {
+		return
+	}
 
 	// Content-Type is required for append
 	contentType := r.Header.Get("Content-Type")

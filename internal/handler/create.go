@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/me/durable/internal/auth"
 	"github.com/me/durable/internal/storage"
 	"github.com/me/durable/internal/stream"
 )
@@ -14,7 +15,12 @@ import (
 // handleCreate handles PUT requests to create a stream.
 func (h *Handler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	streamURL := r.URL.Path
+	streamURL := h.scopedStreamURL(r)
+
+	// Authorize
+	if !h.authorize(w, r, auth.OpCreate, streamURL) {
+		return
+	}
 
 	// Parse headers
 	contentType := r.Header.Get("Content-Type")
@@ -84,12 +90,12 @@ func (h *Handler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Stream-Next-Offset", meta.TailOffset)
 
 	if created {
-		// Location header should be absolute URL
+		// Location header should be absolute URL with original path
 		scheme := "http"
 		if r.TLS != nil {
 			scheme = "https"
 		}
-		location := scheme + "://" + r.Host + streamURL
+		location := scheme + "://" + r.Host + r.URL.Path
 		w.Header().Set("Location", location)
 		w.WriteHeader(http.StatusCreated)
 	} else {

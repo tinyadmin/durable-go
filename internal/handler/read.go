@@ -5,13 +5,20 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/me/durable/internal/auth"
 	"github.com/me/durable/internal/storage"
 	"github.com/me/durable/internal/stream"
 )
 
 // handleRead handles GET requests to read from a stream.
 func (h *Handler) handleRead(w http.ResponseWriter, r *http.Request) {
-	streamURL := r.URL.Path
+	streamURL := h.scopedStreamURL(r)
+
+	// Authorize
+	if !h.authorize(w, r, auth.OpRead, streamURL) {
+		return
+	}
+
 	query := r.URL.Query()
 
 	// Check for multiple offset params (not allowed)

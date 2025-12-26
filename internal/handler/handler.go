@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/me/durable/internal/auth"
 	"github.com/me/durable/internal/cursor"
 	"github.com/me/durable/internal/storage"
 )
@@ -12,6 +13,7 @@ import (
 type Handler struct {
 	storage storage.Storage
 	cursor  *cursor.Generator
+	auth    auth.AuthProvider // nil = no auth
 
 	// Configuration
 	LongPollTimeout time.Duration
@@ -28,6 +30,34 @@ func New(store storage.Storage) *Handler {
 	}
 }
 
+// WithAuth sets the auth provider and returns the handler for chaining.
+func (h *Handler) WithAuth(provider auth.AuthProvider) *Handler {
+	h.auth = provider
+	return h
+}
+
+// scopedStreamURL returns the stream URL scoped to the tenant if auth is enabled.
+func (h *Handler) scopedStreamURL(r *http.Request) string {
+	path := r.URL.Path
+	if authCtx := auth.FromContext(r.Context()); authCtx != nil && authCtx.TenantID != "" {
+		return "/t/" + authCtx.TenantID + path
+	}
+	return path
+}
+
+// authorize checks if the operation is allowed. Returns true if allowed.
+func (h *Handler) authorize(w http.ResponseWriter, r *http.Request, op auth.Operation, streamURL string) bool {
+	if h.auth == nil {
+		return true
+	}
+	authCtx := auth.FromContext(r.Context())
+	if err := h.auth.Authorize(authCtx, op, streamURL); err != nil {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return false
+	}
+	return true
+}
+
 // ServeHTTP implements http.Handler.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// CORS preflight
@@ -38,6 +68,16 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Add CORS headers to all responses
 	h.setCORSHeaders(w)
+
+	// Authenticate if provider configured
+	if h.auth != nil {
+		authCtx, err := h.auth.Authenticate(r)
+		if err != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		r = r.WithContext(auth.WithContext(r.Context(), authCtx))
+	}
 
 	// Route by method
 	switch r.Method {
