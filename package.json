@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@durable-streams/server-conformance-tests": "^0.1.4"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.16"
+  }
+}
