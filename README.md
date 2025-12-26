@@ -10,6 +10,7 @@ Go implementation of the [Durable Streams](https://github.com/durable-streams/du
 - Long-poll and SSE streaming
 - TTL and Expires-At stream expiration
 - CDN cursor collapsing with jitter
+- Pluggable auth with multi-tenant support
 
 ## Storage Backends
 
@@ -58,6 +59,87 @@ curl "http://localhost:4437/v1/mystream?offset=<offset>&live=sse"
 # Delete stream
 curl -X DELETE http://localhost:4437/v1/mystream
 ```
+
+## Authentication
+
+The handler supports pluggable authentication via the `AuthProvider` interface:
+
+```go
+type AuthProvider interface {
+    Authenticate(r *http.Request) (*AuthContext, error)
+    Authorize(ctx *AuthContext, op Operation, streamURL string) error
+}
+
+type AuthContext struct {
+    TenantID string         // streams scoped to /t/{TenantID}/...
+    UserID   string
+    Extra    map[string]any // custom claims
+}
+```
+
+### Example: API Key Auth
+
+```go
+import (
+    "github.com/me/durable/internal/auth"
+    "github.com/me/durable/internal/handler"
+)
+
+h := handler.New(store).WithAuth(&auth.APIKeyProvider{
+    Validate: func(key string) (*auth.AuthContext, error) {
+        // Look up key in database
+        tenant, err := db.GetTenantByAPIKey(key)
+        if err != nil {
+            return nil, auth.ErrInvalidCredentials
+        }
+        return &auth.AuthContext{
+            TenantID: tenant.ID,
+            UserID:   tenant.OwnerID,
+        }, nil
+    },
+    AuthorizeFunc: func(ctx *auth.AuthContext, op auth.Operation, streamURL string) error {
+        // Custom authorization logic
+        if op == auth.OpDelete && !ctx.Extra["admin"].(bool) {
+            return auth.ErrForbidden
+        }
+        return nil
+    },
+})
+```
+
+### Example: Bearer Token (JWT)
+
+```go
+h := handler.New(store).WithAuth(&auth.BearerProvider{
+    Validate: func(token string) (*auth.AuthContext, error) {
+        claims, err := jwt.Verify(token, secret)
+        if err != nil {
+            return nil, auth.ErrInvalidCredentials
+        }
+        return &auth.AuthContext{
+            TenantID: claims.TenantID,
+            UserID:   claims.Subject,
+            Extra:    map[string]any{"roles": claims.Roles},
+        }, nil
+    },
+})
+```
+
+### Multi-Tenant Isolation
+
+When `TenantID` is set, streams are automatically scoped:
+- Client requests `/v1/mystream`
+- Stored internally as `/t/{tenantID}/v1/mystream`
+- Tenants cannot access each other's streams
+
+### Operations
+
+| Operation | HTTP Method | Description |
+|-----------|-------------|-------------|
+| `OpCreate` | PUT | Create a new stream |
+| `OpAppend` | POST | Append data to stream |
+| `OpRead` | GET, HEAD | Read stream data or metadata |
+| `OpDelete` | DELETE | Delete a stream |
 
 ## Conformance Tests
 
