@@ -1,0 +1,11 @@
+{
+  "name": "durable-conformance-tests",
+  "private": true,
+  "scripts": {
+    "test": "go run ./cmd/durable-server -port 19283 & PID=$!; sleep 2; CONFORMANCE_TEST_URL=http://127.0.0.1:19283 vitest run; EXIT=$?; kill $PID 2>/dev/null; exit $EXIT"
+  },
+  "devDependencies": {
+    "@durable-streams/server-conformance-tests": "latest",
+    "vitest": "^4.0.0"
+  }
+}
