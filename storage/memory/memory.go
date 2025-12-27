@@ -3,6 +3,7 @@ package memory
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -131,7 +132,7 @@ func (s *Storage) CreateStream(ctx context.Context, url string, opts storage.Cre
 			processor := stream.NewJSONProcessor()
 			messages, err := processor.ValidateAndFlatten(opts.InitialData, true) // Allow empty array on PUT
 			if err != nil {
-				return nil, false, err
+				return nil, false, fmt.Errorf("create stream %s: %w", url, err)
 			}
 			for _, msg := range messages {
 				offset := offsetGen.Next(len(msg))
@@ -244,7 +245,7 @@ func (s *Storage) Append(ctx context.Context, url string, data []byte, opts stor
 		processor := stream.NewJSONProcessor()
 		messages, err := processor.ValidateAndFlatten(data, false) // Don't allow empty array on POST
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("append to stream %s: %w", url, err)
 		}
 		for _, msg := range messages {
 			offset := sd.offsetGen.Next(len(msg))
@@ -286,7 +287,7 @@ func (s *Storage) Read(ctx context.Context, url string, offset string) (*storage
 	// Parse offset
 	startOffset, err := stream.Parse(offset)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read stream %s: invalid offset %q: %w", url, offset, err)
 	}
 
 	// Find messages after offset

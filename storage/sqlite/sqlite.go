@@ -169,7 +169,7 @@ func (s *Storage) CreateStream(ctx context.Context, url string, opts storage.Cre
 			processor := stream.NewJSONProcessor()
 			messages, err = processor.ValidateAndFlatten(opts.InitialData, true)
 			if err != nil {
-				return nil, false, err
+				return nil, false, fmt.Errorf("create stream %s: %w", url, err)
 			}
 		} else {
 			messages = [][]byte{opts.InitialData}
@@ -310,7 +310,7 @@ func (s *Storage) Append(ctx context.Context, url string, data []byte, opts stor
 		processor := stream.NewJSONProcessor()
 		messages, err = processor.ValidateAndFlatten(data, false)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("append to stream %s: %w", url, err)
 		}
 	} else {
 		messages = [][]byte{data}
@@ -378,7 +378,7 @@ func (s *Storage) Read(ctx context.Context, url string, offset string) (*storage
 
 	startOffset, err := stream.Parse(offset)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read stream %s: invalid offset %q: %w", url, offset, err)
 	}
 
 	var rows *sql.Rows
