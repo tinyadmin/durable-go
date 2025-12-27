@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -29,7 +29,8 @@ func main() {
 	case "memory":
 		store = memory.New()
 	default:
-		log.Fatalf("Unknown storage type: %s (sqlite available as separate module)", *storageType)
+		slog.Error("unknown storage type", "type", *storageType, "hint", "sqlite available as separate module")
+		os.Exit(1)
 	}
 	defer store.Close()
 
@@ -48,9 +49,10 @@ func main() {
 
 	// Start server in goroutine
 	go func() {
-		log.Printf("Durable Streams server listening on %s", addr)
+		slog.Info("server started", "addr", addr)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server error: %v", err)
+			slog.Error("server error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -59,15 +61,16 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down server...")
+	slog.Info("shutting down server")
 
 	// Graceful shutdown with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		slog.Error("server forced to shutdown", "error", err)
+		os.Exit(1)
 	}
 
-	log.Println("Server stopped")
+	slog.Info("server stopped")
 }

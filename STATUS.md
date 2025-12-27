@@ -7,6 +7,7 @@ Honest assessment of the current state of this implementation.
 - **Zero dependencies** in core module - rare and valuable for embedding
 - **Clean module separation** - SQLite and Redis+S3 isolated in separate modules
 - **Error context** - errors wrapped with operation and stream URL for debugging
+- **Structured logging** - uses stdlib `log/slog` with key-value pairs
 - **Full protocol compliance** - passes all 131 conformance tests
 - **Pluggable auth** - flexible provider interface for multi-tenant SaaS
 - **Tenant isolation** - automatic stream scoping by tenant ID
@@ -34,9 +35,8 @@ No structured error responses, no error codes, no machine-readable format. Clien
 ### No Observability
 
 - No metrics (request latency, stream count, storage size)
-- No structured logging (just `log.Printf`)
 - No distributed tracing
-- Hard to debug in production
+- No request logging in handler (only server lifecycle logged)
 
 ### SQLite Scaling
 
@@ -93,10 +93,10 @@ Streams grow until OOM.
 ## Recommended Before Production
 
 1. Add unit tests for auth and storage
-2. Implement structured logging
-3. Add Prometheus metrics
-4. Set memory limits and eviction policies
-5. Add health check endpoint
-6. Implement request timeouts and rate limiting
-7. Add proper error types with codes
-8. Load test with concurrent connections
+2. Add Prometheus metrics
+3. Set memory limits and eviction policies
+4. Add health check endpoint
+5. Implement request timeouts and rate limiting
+6. Add proper error types with codes
+7. Load test with concurrent connections
+8. Add request logging middleware
