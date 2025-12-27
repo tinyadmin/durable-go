@@ -3,6 +3,7 @@ package memory
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -51,6 +52,10 @@ func New() *Storage {
 
 // CreateStream creates a new stream or returns existing if config matches.
 func (s *Storage) CreateStream(ctx context.Context, url string, opts storage.CreateOptions) (*storage.StreamMetadata, bool, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, false, fmt.Errorf("create stream %s: %w", url, err)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -160,6 +165,10 @@ func (s *Storage) CreateStream(ctx context.Context, url string, opts storage.Cre
 
 // DeleteStream removes a stream and all its data.
 func (s *Storage) DeleteStream(ctx context.Context, url string) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("delete stream %s: %w", url, err)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -174,6 +183,10 @@ func (s *Storage) DeleteStream(ctx context.Context, url string) error {
 
 // GetMetadata retrieves stream metadata.
 func (s *Storage) GetMetadata(ctx context.Context, url string) (*storage.StreamMetadata, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("get metadata %s: %w", url, err)
+	}
+
 	s.mu.RLock()
 	sd, ok := s.streams[url]
 	s.mu.RUnlock()
@@ -203,6 +216,10 @@ func (s *Storage) GetMetadata(ctx context.Context, url string) (*storage.StreamM
 
 // Append adds data to the stream.
 func (s *Storage) Append(ctx context.Context, url string, data []byte, opts storage.AppendOptions) (*storage.AppendResult, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("append to stream %s: %w", url, err)
+	}
+
 	if len(data) == 0 {
 		return nil, storage.ErrEmptyAppend
 	}
@@ -267,6 +284,10 @@ func (s *Storage) Append(ctx context.Context, url string, data []byte, opts stor
 
 // Read reads data from the stream starting at offset.
 func (s *Storage) Read(ctx context.Context, url string, offset string) (*storage.ReadResult, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("read stream %s: %w", url, err)
+	}
+
 	s.mu.RLock()
 	sd, ok := s.streams[url]
 	s.mu.RUnlock()
@@ -286,7 +307,7 @@ func (s *Storage) Read(ctx context.Context, url string, offset string) (*storage
 	// Parse offset
 	startOffset, err := stream.Parse(offset)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read stream %s: invalid offset %q: %w", url, offset, err)
 	}
 
 	// Find messages after offset
@@ -334,6 +355,10 @@ func (s *Storage) Read(ctx context.Context, url string, offset string) (*storage
 
 // Subscribe registers for notifications when new data is available.
 func (s *Storage) Subscribe(ctx context.Context, url string, offset string) (<-chan storage.Notification, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("subscribe to stream %s: %w", url, err)
+	}
+
 	s.mu.RLock()
 	sd, ok := s.streams[url]
 	s.mu.RUnlock()

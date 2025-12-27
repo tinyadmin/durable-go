@@ -72,6 +72,10 @@ func New(opts Options) (*Storage, error) {
 
 // CreateStream creates a new stream or returns existing if config matches.
 func (s *Storage) CreateStream(ctx context.Context, url string, opts storage.CreateOptions) (*storage.StreamMetadata, bool, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, false, fmt.Errorf("create stream %s: %w", url, err)
+	}
+
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 
@@ -87,7 +91,7 @@ func (s *Storage) CreateStream(ctx context.Context, url string, opts storage.Cre
 	if err == nil {
 		if existing.expiresAt != nil && now.After(*existing.expiresAt) {
 			if _, err := s.db.ExecContext(ctx, "DELETE FROM streams WHERE url = ?", url); err != nil {
-				return nil, false, err
+				return nil, false, fmt.Errorf("create stream %s: delete expired: %w", url, err)
 			}
 			s.removeGenerator(url)
 		} else {
@@ -112,7 +116,7 @@ func (s *Storage) CreateStream(ctx context.Context, url string, opts storage.Cre
 			}, false, nil
 		}
 	} else if err != sql.ErrNoRows {
-		return nil, false, err
+		return nil, false, fmt.Errorf("create stream %s: check existing: %w", url, err)
 	}
 
 	offsetGen := stream.NewGenerator()
@@ -140,7 +144,7 @@ func (s *Storage) CreateStream(ctx context.Context, url string, opts storage.Cre
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return nil, false, err
+		return nil, false, fmt.Errorf("create stream %s: begin transaction: %w", url, err)
 	}
 	defer tx.Rollback()
 
@@ -160,7 +164,7 @@ func (s *Storage) CreateStream(ctx context.Context, url string, opts storage.Cre
 		initialOffset.Timestamp, initialOffset.Sequence, initialOffset.BytePosition,
 	)
 	if err != nil {
-		return nil, false, err
+		return nil, false, fmt.Errorf("create stream %s: insert: %w", url, err)
 	}
 
 	if len(opts.InitialData) > 0 {
@@ -169,7 +173,7 @@ func (s *Storage) CreateStream(ctx context.Context, url string, opts storage.Cre
 			processor := stream.NewJSONProcessor()
 			messages, err = processor.ValidateAndFlatten(opts.InitialData, true)
 			if err != nil {
-				return nil, false, err
+				return nil, false, fmt.Errorf("create stream %s: validate initial data: %w", url, err)
 			}
 		} else {
 			messages = [][]byte{opts.InitialData}
@@ -182,7 +186,7 @@ func (s *Storage) CreateStream(ctx context.Context, url string, opts storage.Cre
 				url, offset.String(), msg, nowMs,
 			)
 			if err != nil {
-				return nil, false, err
+				return nil, false, fmt.Errorf("create stream %s: insert message: %w", url, err)
 			}
 			tailOffset = offset.String()
 		}
@@ -198,12 +202,12 @@ func (s *Storage) CreateStream(ctx context.Context, url string, opts storage.Cre
 			tailOffset, current.Timestamp, current.Sequence, current.BytePosition, url,
 		)
 		if err != nil {
-			return nil, false, err
+			return nil, false, fmt.Errorf("create stream %s: update tail: %w", url, err)
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		return nil, false, err
+		return nil, false, fmt.Errorf("create stream %s: commit: %w", url, err)
 	}
 
 	s.setGenerator(url, offsetGen)
@@ -221,17 +225,21 @@ func (s *Storage) CreateStream(ctx context.Context, url string, opts storage.Cre
 
 // DeleteStream removes a stream and all its data.
 func (s *Storage) DeleteStream(ctx context.Context, url string) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("delete stream %s: %w", url, err)
+	}
+
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 
 	result, err := s.db.ExecContext(ctx, "DELETE FROM streams WHERE url = ?", url)
 	if err != nil {
-		return err
+		return fmt.Errorf("delete stream %s: %w", url, err)
 	}
 
 	affected, err := result.RowsAffected()
 	if err != nil {
-		return err
+		return fmt.Errorf("delete stream %s: rows affected: %w", url, err)
 	}
 
 	if affected == 0 {
@@ -246,11 +254,15 @@ func (s *Storage) DeleteStream(ctx context.Context, url string) error {
 
 // GetMetadata retrieves stream metadata.
 func (s *Storage) GetMetadata(ctx context.Context, url string) (*storage.StreamMetadata, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("get metadata %s: %w", url, err)
+	}
+
 	row, err := s.getStreamRow(ctx, url)
 	if err == sql.ErrNoRows {
 		return nil, storage.ErrStreamNotFound
 	} else if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get metadata %s: %w", url, err)
 	}
 
 	if row.expiresAt != nil && time.Now().After(*row.expiresAt) {
@@ -270,6 +282,10 @@ func (s *Storage) GetMetadata(ctx context.Context, url string) (*storage.StreamM
 
 // Append adds data to the stream.
 func (s *Storage) Append(ctx context.Context, url string, data []byte, opts storage.AppendOptions) (*storage.AppendResult, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("append to stream %s: %w", url, err)
+	}
+
 	if len(data) == 0 {
 		return nil, storage.ErrEmptyAppend
 	}
@@ -281,7 +297,7 @@ func (s *Storage) Append(ctx context.Context, url string, data []byte, opts stor
 	if err == sql.ErrNoRows {
 		return nil, storage.ErrStreamNotFound
 	} else if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("append to stream %s: get metadata: %w", url, err)
 	}
 
 	if row.expiresAt != nil && time.Now().After(*row.expiresAt) {
@@ -310,7 +326,7 @@ func (s *Storage) Append(ctx context.Context, url string, data []byte, opts stor
 		processor := stream.NewJSONProcessor()
 		messages, err = processor.ValidateAndFlatten(data, false)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("append to stream %s: validate data: %w", url, err)
 		}
 	} else {
 		messages = [][]byte{data}
@@ -318,7 +334,7 @@ func (s *Storage) Append(ctx context.Context, url string, data []byte, opts stor
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("append to stream %s: begin transaction: %w", url, err)
 	}
 	defer tx.Rollback()
 
@@ -329,7 +345,7 @@ func (s *Storage) Append(ctx context.Context, url string, data []byte, opts stor
 			url, offset.String(), msg, now,
 		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("append to stream %s: insert message: %w", url, err)
 		}
 		lastOffset = offset.String()
 	}
@@ -351,11 +367,11 @@ func (s *Storage) Append(ctx context.Context, url string, data []byte, opts stor
 		lastOffset, lastSeq, current.Timestamp, current.Sequence, current.BytePosition, url,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("append to stream %s: update tail: %w", url, err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("append to stream %s: commit: %w", url, err)
 	}
 
 	s.notifier.Notify(url, lastOffset)
@@ -365,11 +381,15 @@ func (s *Storage) Append(ctx context.Context, url string, data []byte, opts stor
 
 // Read reads data from the stream starting at offset.
 func (s *Storage) Read(ctx context.Context, url string, offset string) (*storage.ReadResult, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("read stream %s: %w", url, err)
+	}
+
 	row, err := s.getStreamRow(ctx, url)
 	if err == sql.ErrNoRows {
 		return nil, storage.ErrStreamNotFound
 	} else if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read stream %s: get metadata: %w", url, err)
 	}
 
 	if row.expiresAt != nil && time.Now().After(*row.expiresAt) {
@@ -378,7 +398,7 @@ func (s *Storage) Read(ctx context.Context, url string, offset string) (*storage
 
 	startOffset, err := stream.Parse(offset)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read stream %s: invalid offset %q: %w", url, offset, err)
 	}
 
 	var rows *sql.Rows
@@ -399,7 +419,7 @@ func (s *Storage) Read(ctx context.Context, url string, offset string) (*storage
 		)
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read stream %s: query messages: %w", url, err)
 	}
 	defer rows.Close()
 
@@ -410,13 +430,13 @@ func (s *Storage) Read(ctx context.Context, url string, offset string) (*storage
 		var msgOffset string
 		var data []byte
 		if err := rows.Scan(&msgOffset, &data); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("read stream %s: scan message: %w", url, err)
 		}
 		resultMessages = append(resultMessages, data)
 		nextOffset = msgOffset
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read stream %s: iterate messages: %w", url, err)
 	}
 
 	if nextOffset == "" {
@@ -445,11 +465,15 @@ func (s *Storage) Read(ctx context.Context, url string, offset string) (*storage
 
 // Subscribe registers for notifications when new data is available.
 func (s *Storage) Subscribe(ctx context.Context, url string, offset string) (<-chan storage.Notification, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("subscribe to stream %s: %w", url, err)
+	}
+
 	row, err := s.getStreamRow(ctx, url)
 	if err == sql.ErrNoRows {
 		return nil, storage.ErrStreamNotFound
 	} else if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("subscribe to stream %s: %w", url, err)
 	}
 
 	if row.expiresAt != nil && time.Now().After(*row.expiresAt) {

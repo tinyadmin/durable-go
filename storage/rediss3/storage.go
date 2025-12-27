@@ -101,6 +101,10 @@ func channel(url string) string   { return fmt.Sprintf(channelPattern, url) }
 
 // CreateStream creates a new stream or returns existing if config matches.
 func (s *Storage) CreateStream(ctx context.Context, url string, opts storage.CreateOptions) (*storage.StreamMetadata, bool, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, false, fmt.Errorf("create stream %s: %w", url, err)
+	}
+
 	contentType := opts.ContentType
 	if contentType == "" {
 		contentType = "application/octet-stream"
@@ -116,7 +120,7 @@ func (s *Storage) CreateStream(ctx context.Context, url string, opts storage.Cre
 		if existing.ExpiresAt > 0 && nowMs > existing.ExpiresAt {
 			// Expired - delete and recreate
 			if err := s.deleteStreamKeys(ctx, url); err != nil {
-				return nil, false, err
+				return nil, false, fmt.Errorf("create stream %s: delete expired: %w", url, err)
 			}
 		} else {
 			// Not expired - validate config matches
@@ -193,7 +197,7 @@ func (s *Storage) CreateStream(ctx context.Context, url string, opts storage.Cre
 			processor := stream.NewJSONProcessor()
 			messages, err = processor.ValidateAndFlatten(opts.InitialData, true)
 			if err != nil {
-				return nil, false, err
+				return nil, false, fmt.Errorf("create stream %s: validate initial data: %w", url, err)
 			}
 		} else {
 			messages = [][]byte{opts.InitialData}
@@ -218,7 +222,7 @@ func (s *Storage) CreateStream(ctx context.Context, url string, opts storage.Cre
 	}
 
 	if _, err := pipe.Exec(ctx); err != nil {
-		return nil, false, err
+		return nil, false, fmt.Errorf("create stream %s: exec pipeline: %w", url, err)
 	}
 
 	// Cache generator
@@ -237,17 +241,21 @@ func (s *Storage) CreateStream(ctx context.Context, url string, opts storage.Cre
 
 // DeleteStream removes a stream and all its data.
 func (s *Storage) DeleteStream(ctx context.Context, url string) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("delete stream %s: %w", url, err)
+	}
+
 	// Check if exists first
 	exists, err := s.rdb.Exists(ctx, metaKey(url)).Result()
 	if err != nil {
-		return err
+		return fmt.Errorf("delete stream %s: check exists: %w", url, err)
 	}
 	if exists == 0 {
 		return storage.ErrStreamNotFound
 	}
 
 	if err := s.deleteStreamKeys(ctx, url); err != nil {
-		return err
+		return fmt.Errorf("delete stream %s: %w", url, err)
 	}
 
 	// Notify subscribers of deletion
@@ -258,6 +266,10 @@ func (s *Storage) DeleteStream(ctx context.Context, url string) error {
 
 // GetMetadata retrieves stream metadata.
 func (s *Storage) GetMetadata(ctx context.Context, url string) (*storage.StreamMetadata, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("get metadata %s: %w", url, err)
+	}
+
 	fields, err := s.getMetaFields(ctx, url)
 	if err != nil {
 		return nil, storage.ErrStreamNotFound
@@ -271,7 +283,7 @@ func (s *Storage) GetMetadata(ctx context.Context, url string) (*storage.StreamM
 	// Get current tail
 	tail, err := s.rdb.Get(ctx, tailKey(url)).Result()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get metadata %s: get tail: %w", url, err)
 	}
 
 	meta := s.fieldsToMetadata(url, fields)
@@ -281,6 +293,10 @@ func (s *Storage) GetMetadata(ctx context.Context, url string) (*storage.StreamM
 
 // Append adds data to the stream.
 func (s *Storage) Append(ctx context.Context, url string, data []byte, opts storage.AppendOptions) (*storage.AppendResult, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("append to stream %s: %w", url, err)
+	}
+
 	if len(data) == 0 {
 		return nil, storage.ErrEmptyAppend
 	}
@@ -319,7 +335,7 @@ func (s *Storage) Append(ctx context.Context, url string, data []byte, opts stor
 		processor := stream.NewJSONProcessor()
 		messages, err = processor.ValidateAndFlatten(data, false)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("append to stream %s: validate data: %w", url, err)
 		}
 	} else {
 		messages = [][]byte{data}
@@ -354,7 +370,7 @@ func (s *Storage) Append(ctx context.Context, url string, data []byte, opts stor
 	pipe.Publish(ctx, channel(url), lastOffset)
 
 	if _, err := pipe.Exec(ctx); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("append to stream %s: exec pipeline: %w", url, err)
 	}
 
 	return &storage.AppendResult{NextOffset: lastOffset}, nil
@@ -362,6 +378,10 @@ func (s *Storage) Append(ctx context.Context, url string, data []byte, opts stor
 
 // Read reads data from the stream starting at offset.
 func (s *Storage) Read(ctx context.Context, url string, offset string) (*storage.ReadResult, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("read stream %s: %w", url, err)
+	}
+
 	// Get metadata
 	fields, err := s.getMetaFields(ctx, url)
 	if err != nil {
@@ -376,13 +396,13 @@ func (s *Storage) Read(ctx context.Context, url string, offset string) (*storage
 	// Parse start offset
 	startOffset, err := stream.Parse(offset)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read stream %s: invalid offset %q: %w", url, offset, err)
 	}
 
 	// Get current tail
 	tail, err := s.rdb.Get(ctx, tailKey(url)).Result()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read stream %s: get tail: %w", url, err)
 	}
 
 	// Read messages using ZRANGEBYLEX
@@ -398,7 +418,7 @@ func (s *Storage) Read(ctx context.Context, url string, offset string) (*storage
 		Max: "+",
 	}).Result()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read stream %s: query messages: %w", url, err)
 	}
 
 	// Parse messages
@@ -444,10 +464,14 @@ func (s *Storage) Read(ctx context.Context, url string, offset string) (*storage
 
 // Subscribe registers for notifications when new data is available.
 func (s *Storage) Subscribe(ctx context.Context, url string, offset string) (<-chan storage.Notification, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("subscribe to stream %s: %w", url, err)
+	}
+
 	// Verify stream exists
 	exists, err := s.rdb.Exists(ctx, metaKey(url)).Result()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("subscribe to stream %s: check exists: %w", url, err)
 	}
 	if exists == 0 {
 		return nil, storage.ErrStreamNotFound

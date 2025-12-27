@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"strings"
 	"time"
 )
 
@@ -101,51 +102,17 @@ type Storage interface {
 
 // IsJSONContentType returns true if the content type is JSON.
 func IsJSONContentType(contentType string) bool {
-	// Normalize: extract MIME type before semicolon and lowercase
-	if idx := indexOf(contentType, ';'); idx != -1 {
+	if idx := strings.IndexByte(contentType, ';'); idx != -1 {
 		contentType = contentType[:idx]
 	}
-	contentType = toLower(trimSpace(contentType))
+	contentType = strings.ToLower(strings.TrimSpace(contentType))
 	return contentType == "application/json"
 }
 
 // NormalizeContentType extracts the MIME type without parameters, lowercased.
 func NormalizeContentType(contentType string) string {
-	if idx := indexOf(contentType, ';'); idx != -1 {
+	if idx := strings.IndexByte(contentType, ';'); idx != -1 {
 		contentType = contentType[:idx]
 	}
-	return toLower(trimSpace(contentType))
-}
-
-func toLower(s string) string {
-	b := make([]byte, len(s))
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		if c >= 'A' && c <= 'Z' {
-			c += 'a' - 'A'
-		}
-		b[i] = c
-	}
-	return string(b)
-}
-
-func indexOf(s string, c byte) int {
-	for i := 0; i < len(s); i++ {
-		if s[i] == c {
-			return i
-		}
-	}
-	return -1
-}
-
-func trimSpace(s string) string {
-	start := 0
-	end := len(s)
-	for start < end && (s[start] == ' ' || s[start] == '\t') {
-		start++
-	}
-	for end > start && (s[end-1] == ' ' || s[end-1] == '\t') {
-		end--
-	}
-	return s[start:end]
+	return strings.ToLower(strings.TrimSpace(contentType))
 }
