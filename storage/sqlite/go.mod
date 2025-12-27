@@ -1,6 +1,6 @@
 module github.com/tinyadmin/durable-go/storage/sqlite
 
-go 1.25.5
+go 1.25
 
 require (
 	github.com/tinyadmin/durable-go v0.0.0

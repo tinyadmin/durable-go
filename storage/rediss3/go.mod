@@ -1,6 +1,6 @@
 module github.com/tinyadmin/durable-go/storage/rediss3
 
-go 1.25.5
+go 1.25
 
 require (
 	github.com/redis/go-redis/v9 v9.7.0
