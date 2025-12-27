@@ -5,7 +5,8 @@ Honest assessment of the current state of this implementation.
 ## What Works
 
 - **Zero dependencies** in core module - rare and valuable for embedding
-- **Clean module separation** - SQLite isolated to avoid pulling in modernc.org/sqlite
+- **Clean module separation** - SQLite and Redis+S3 isolated in separate modules
+- **Error context** - errors wrapped with operation and stream URL for debugging
 - **Full protocol compliance** - passes all 131 conformance tests
 - **Pluggable auth** - flexible provider interface for multi-tenant SaaS
 - **Tenant isolation** - automatic stream scoping by tenant ID
@@ -22,13 +23,13 @@ We rely entirely on the conformance test suite. No unit tests for:
 
 If the conformance tests miss something, we miss it too.
 
-### Basic Error Handling
+### Basic Error Responses
 
 ```go
 http.Error(w, "Stream not found", http.StatusNotFound)
 ```
 
-No structured errors, no error codes, no machine-readable responses. Clients can't programmatically distinguish error types beyond HTTP status.
+No structured error responses, no error codes, no machine-readable format. Clients can't programmatically distinguish error types beyond HTTP status. (Internal errors are wrapped with context for debugging.)
 
 ### No Observability
 
@@ -45,6 +46,13 @@ defer s.writeMu.Unlock()
 ```
 
 One write at a time across all streams. Fine for small scale, becomes a bottleneck with concurrent writers.
+
+### Redis+S3 Backend (WIP)
+
+The `storage/rediss3` module is implemented but not tested:
+- No S3 archival yet (Redis-only for now)
+- No integration tests
+- Pub/sub notifications untested at scale
 
 ### Memory Storage Limits
 
