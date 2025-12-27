@@ -18,3 +18,6 @@ npx @anthropic-ai/durable-streams-conformance
 - `storage/memory/` - In-memory (default, single process only)
 - `storage/sqlite/` - SQLite-based persistent storage
 - `storage/rediss3/` - Redis for hot data + S3 for archives (WIP)
+
+## Status Tracking
+Keep `STATUS.md` updated when fixing limitations or adding features. It documents what's missing and what works.
